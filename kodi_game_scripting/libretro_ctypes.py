@@ -54,16 +54,17 @@ class LibretroWrapper:
             self.need_fullpath = retro_system_info.need_fullpath
             self.block_extract = retro_system_info.block_extract
             self.supports_no_game = False
+            self.supports_disc_control = False
 
         def __getitem__(self, item):
             return getattr(self, item)
 
         def __repr__(self):
             return '(name={}, version={}, extensions={}, need_fullpath={},' \
-                   ' block_extract={}, supports_no_game={})'.format(
+                   ' block_extract={}, supports_no_game={}, supports_disc_control={})'.format(
                        self.name, self.version, self.extensions,
                        self.need_fullpath, self.block_extract,
-                       self.supports_no_game)
+                       self.supports_no_game, self.supports_disc_control)
 
     class RetroVariable(ctypes.Structure):
         """ struct libretro_variable """
@@ -108,9 +109,19 @@ class LibretroWrapper:
                     if var.key is None and var.value is None:
                         break
                     outer.variables.append(outer.parse_libretro_variable(var))
+            elif cb_type == 13:  # RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE
+                outer.system_info.supports_disc_control = True
+            elif cb_type == 58:  # RETRO_ENVIRONMENT_SET_DISK_CONTROL_EXT_INTERFACE
+                outer.system_info.supports_disc_control = True
 
         retro_environment_cb = retro_environment_t(retro_environment_cb)
         retro_set_environment(retro_environment_cb)
+
+        retro_init = lib.retro_init
+        retro_init.argtypes = []
+        retro_init.restype = None
+
+        retro_init()
 
         # opengl linkage
         self.opengl_linkage = self.has_opengl_linkage(library_path)
